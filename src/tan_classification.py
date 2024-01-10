@@ -11,6 +11,10 @@ from random import SystemRandom
 import models
 import utils
 
+from torch.utils.tensorboard import SummaryWriter
+experiment_id = 'classification'
+writer = SummaryWriter('runs/experiment_' + experiment_id)
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--niters', type=int, default=2000)
 parser.add_argument('--lr', type=float, default=0.001)
@@ -145,9 +149,18 @@ if __name__ == '__main__':
             train_n += batch_len
             mse += utils.mean_squared_error(observed_data, pred_x.mean(0), 
                                       observed_mask) * batch_len
+            # TensorBoard에 훈련 데이터 로그 기록 (훈련 루프 내부)
+            writer.add_scalar('Loss/Train_Recon', recon_loss.item(), itr)
+            writer.add_scalar('Loss/Train_Classif', ce_loss.item(), itr)
+            writer.add_scalar('Accuracy/Train', train_acc / train_n, itr)
+            writer.add_scalar('MSE/Train', mse / train_n, itr)
         total_time += time.time() - start_time
         val_loss, val_acc, val_auc = utils.evaluate_classifier(
             rec, val_loader, args=args, classifier=classifier, reconst=True, num_sample=1, dim=dim)
+        # TensorBoard에 검증 데이터 로그 기록 (검증 루프 후)
+        writer.add_scalar('Loss/Val', val_loss, itr)
+        writer.add_scalar('Accuracy/Val', val_acc, itr)
+        writer.add_scalar('AUC/Val', val_auc, itr)
         if val_loss <= best_val_loss:
             best_val_loss = min(best_val_loss, val_loss)
             rec_state_dict = rec.state_dict()
@@ -175,5 +188,6 @@ if __name__ == '__main__':
                 args.dec + '_' + 
                 str(experiment_id) +
                 '.h5')
+    writer.close()  # TensorBoard Writer 닫기
     print(best_val_loss)
     print(total_time)

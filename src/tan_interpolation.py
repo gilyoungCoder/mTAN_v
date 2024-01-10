@@ -8,6 +8,10 @@ from random import SystemRandom
 import models
 import utils
 
+from torch.utils.tensorboard import SummaryWriter
+experiment_id = 'interpolation' 
+writer = SummaryWriter('runs/experiment_' + str(experiment_id))
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--niters', type=int, default=2000)
 parser.add_argument('--lr', type=float, default=0.01)
@@ -154,11 +158,17 @@ if __name__ == '__main__':
             avg_kl += torch.mean(analytic_kl) * batch_len
             mse += utils.mean_squared_error(
                 observed_data, pred_x.mean(0), observed_mask) * batch_len
+            writer.add_scalar('Loss/train', train_loss / train_n, itr)
+            writer.add_scalar('Reconstruction_Error/train', -avg_reconst / train_n, itr)
+            writer.add_scalar('KL_Divergence/train', avg_kl / train_n, itr)
+            writer.add_scalar('MSE/train', mse / train_n, itr)
 
         print('Iter: {}, avg elbo: {:.4f}, avg reconst: {:.4f}, avg kl: {:.4f}, mse: {:.6f}'
             .format(itr, train_loss / train_n, -avg_reconst / train_n, avg_kl / train_n, mse / train_n))
         if itr % 10 == 0:
-            print('Test Mean Squared Error', utils.evaluate(dim, rec, dec, test_loader, args, 1))
+            test_mse = utils.evaluate(dim, rec, dec, test_loader, args, 1)
+            writer.add_scalar('MSE/test', test_mse, itr)
+            print('Test Mean Squared Error', test_mse)
         if itr % 10 == 0 and args.save:
             torch.save({
                 'args': args,
@@ -169,3 +179,6 @@ if __name__ == '__main__':
                 'loss': -loss,
             }, args.dataset + '_' + args.enc + '_' + args.dec + '_' +
                 str(experiment_id) + '.h5')
+    
+    writer.close()
+
