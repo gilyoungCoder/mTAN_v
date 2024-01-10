@@ -155,7 +155,7 @@ if __name__ == '__main__':
             # TensorBoard에 훈련 데이터 로그 기록 (훈련 루프 내부)
             vessl.log(step = itr, payload={'Loss/Train_recon': recon_loss.item(),
                                            'Loss/Train_Classif': ce_loss.item(),
-                                           'Accuracy/Train': train_acc / train_nm,
+                                           'Accuracy/Train': train_acc / train_n,
                                            'MSE/Train': mse / train_n})
         total_time += time.time() - start_time
         val_loss, val_acc, val_auc = utils.evaluate_classifier(
